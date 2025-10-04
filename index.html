@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <link rel="manifest" href="manifest.json">
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./service-worker.js");
+  }
+</script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>وب‌اپ بلوتوث (BLE) — ارسال ۴ دستور + دریافت دیتا</title>
+  <style>
+    :root { --radius: 16px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0b0e14; color:#eaeefb; margin:0; }
+    .container { max-width: 980px; margin: 24px auto; padding: 24px; }
+    .card { background:#111522; border: 1px solid #1b2030; border-radius: var(--radius); padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    h1 { font-size: 22px; margin: 0 0 10px; }
+    .muted { color:#a9b1d6; font-size: 14px; }
+    .row { display:flex; gap:12px; flex-wrap: wrap; align-items:center; }
+    button { cursor:pointer; border-radius: 12px; border:1px solid #2a324a; background:#1a2033; color:#eaeefb; padding:10px 14px; font-size:14px; }
+    button.primary { background:#2a7bff; border-color:#2a7bff; color:white; }
+    button.danger { background:#b73535; border-color:#b73535; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    input[type="text"], input[type="search"] { flex:1; min-width: 200px; border-radius: 12px; border:1px solid #2a324a; background:#0f1423; color:#eaeefb; padding:10px 12px; }
+    label { font-size: 13px; color:#bac4e0; }
+    .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
+    @media (min-width: 720px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+    .cmd-row { display:flex; gap:8px; align-items:center; }
+    .log { background:#0f1423; border:1px solid #2a324a; border-radius: 12px; min-height: 220px; max-height: 340px; overflow:auto; padding:12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; white-space: pre-wrap; }
+    .tag { display:inline-block; background:#19213a; color:#9db1ff; border:1px solid #2a324a; padding:4px 8px; border-radius:999px; font-size:12px; margin-inline-end:6px; }
+    .sep { height:1px; background:linear-gradient(90deg, transparent, #2a324a, transparent); margin:16px 0; }
+    .row .grow { flex:1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>اتصال به دیوایس BLE و ارسال/دریافت رشته‌ها</h1>
+      <p class="muted">این وب‌اپ از <b>Web Bluetooth</b> استفاده می‌کند (فقط <b>BLE</b>). برای اجرا، صفحه را از <b>localhost</b> باز کنید (نه file://). بهترین مرورگر: Chrome/Edge دسکتاپ.</p>
+
+      <div class="sep"></div>
+
+      <div class="row">
+        <button id="btnConnect" class="primary">اتصال</button>
+        <button id="btnDisconnect" class="danger" disabled>قطع اتصال</button>
+        <span id="status" class="tag">وضعیت: قطع</span>
+        <label class="row" style="gap:6px; align-items:center;">
+          <input type="checkbox" id="appendNewline" checked /> افزودن \n به انتهای دستورات
+        </label>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="grid grid-2">
+        <div class="cmd-row">
+          <label class="muted" style="min-width:70px;">دستور ۱</label>
+          <input id="cmd1" type="text" value="CMD1" />
+          <button class="sendBtn" data-for="cmd1" disabled>ارسال</button>
+        </div>
+        <div class="cmd-row">
+          <label class="muted" style="min-width:70px;">دستور ۲</label>
+          <input id="cmd2" type="text" value="CMD2" />
+          <button class="sendBtn" data-for="cmd2" disabled>ارسال</button>
+        </div>
+        <div class="cmd-row">
+          <label class="muted" style="min-width:70px;">دستور ۳</label>
+          <input id="cmd3" type="text" value="CMD3" />
+          <button class="sendBtn" data-for="cmd3" disabled>ارسال</button>
+        </div>
+        <div class="cmd-row">
+          <label class="muted" style="min-width:70px;">دستور ۴</label>
+          <input id="cmd4" type="text" value="CMD4" />
+          <button class="sendBtn" data-for="cmd4" disabled>ارسال</button>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="cmd-row">
+        <label class="muted" style="min-width:90px;">دستور دلخواه</label>
+        <input id="customCmd" type="text" placeholder="مثلاً LED ON" />
+        <button id="btnSendCustom" disabled>ارسال</button>
+        <button id="btnClear" class="" title="پاک کردن لاگ">پاک‌کردن لاگ</button>
+        <button id="btnSave" class="" title="دانلود لاگ">دانلود لاگ</button>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="row">
+        <div class="grow">
+          <div class="muted" style="margin-bottom:6px;">دریافت/ارسال</div>
+          <div id="log" class="log"></div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+      <details>
+        <summary>پیکربندی UUID (برای دیوایس‌های NUS/سفارشی)</summary>
+        <p class="muted">پیش‌فرض روی <b>Nordic UART Service</b> تنظیم شده. اگر دیوایس شما UUID دیگری دارد، این مقادیر را تغییر دهید.</p>
+        <div class="grid">
+          <div class="cmd-row">
+            <label style="min-width:190px;">Service UUID</label>
+            <input id="svcUuid" type="text" value="6e400001-b5a3-f393-e0a9-e50e24dcca9e" />
+          </div>
+          <div class="cmd-row">
+            <label style="min-width:190px;">RX (write) UUID</label>
+            <input id="rxUuid" type="text" value="6e400002-b5a3-f393-e0a9-e50e24dcca9e" />
+          </div>
+          <div class="cmd-row">
+            <label style="min-width:190px;">TX (notify) UUID</label>
+            <input id="txUuid" type="text" value="6e400003-b5a3-f393-e0a9-e50e24dcca9e" />
+          </div>
+          <div class="cmd-row">
+            <label style="min-width:190px;">فیلتر نام (اختیاری)</label>
+            <input id="namePrefix" type="text" placeholder="مثلاً ESP / NUS / MyDev" />
+          </div>
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+    const logEl = $('#log');
+    const statusEl = $('#status');
+    const btnConnect = $('#btnConnect');
+    const btnDisconnect = $('#btnDisconnect');
+    const sendButtons = document.querySelectorAll('.sendBtn');
+    const btnSendCustom = $('#btnSendCustom');
+    const btnClear = $('#btnClear');
+    const btnSave = $('#btnSave');
+    const appendNewlineEl = $('#appendNewline');
+
+    const cmdInputs = {
+      cmd1: $('#cmd1'),
+      cmd2: $('#cmd2'),
+      cmd3: $('#cmd3'),
+      cmd4: $('#cmd4'),
+      custom: $('#customCmd'),
+    };
+
+    const uuidInputs = {
+      service: $('#svcUuid'),
+      rx: $('#rxUuid'),
+      tx: $('#txUuid'),
+      namePrefix: $('#namePrefix'),
+    };
+
+    let device = null;
+    let gatt = null;
+    let service = null;
+    let rxChar = null; // write
+    let txChar = null; // notify
+    let textDec = new TextDecoder();
+    let textEnc = new TextEncoder();
+
+    function supportsSecureContext() {
+      const ok = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if (!ok) {
+        appendLog('⚠️ برای استفاده از Web Bluetooth باید از طریق https یا localhost صفحه را باز کنید.');
+      }
+      return ok;
+    }
+
+    function setConnectedUI(connected) {
+      btnConnect.disabled = connected;
+      btnDisconnect.disabled = !connected;
+      btnSendCustom.disabled = !connected;
+      sendButtons.forEach(b => b.disabled = !connected);
+      statusEl.textContent = 'وضعیت: ' + (connected ? 'متصل' : 'قطع');
+      statusEl.style.color = connected ? '#7dff9e' : '';
+    }
+
+    function appendLog(msg) {
+      const t = new Date().toLocaleTimeString();
+      logEl.textContent += `[${t}] ${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function connect() {
+      if (!supportsSecureContext()) return;
+      try {
+        const serviceUuid = uuidInputs.service.value.trim();
+        const filters = [];
+        const namePrefix = uuidInputs.namePrefix.value.trim();
+        if (namePrefix) { filters.push({ namePrefix }); }
+
+        const deviceOptions = filters.length ? { filters, optionalServices: [serviceUuid] } : { acceptAllDevices: true, optionalServices: [serviceUuid] };
+
+        device = await navigator.bluetooth.requestDevice(deviceOptions);
+        device.addEventListener('gattserverdisconnected', onDisconnected);
+
+        appendLog('در حال اتصال...');
+        gatt = await device.gatt.connect();
+        service = await gatt.getPrimaryService(serviceUuid);
+
+        rxChar = await service.getCharacteristic(uuidInputs.rx.value.trim());
+        txChar = await service.getCharacteristic(uuidInputs.tx.value.trim());
+
+        await txChar.startNotifications();
+        txChar.addEventListener('characteristicvaluechanged', onNotification);
+
+        setConnectedUI(true);
+        appendLog('✅ اتصال برقرار شد.');
+      } catch (err) {
+        appendLog('❌ خطا در اتصال: ' + err);
+        cleanup();
+      }
+    }
+
+    function onDisconnected() {
+      appendLog('⚡️ اتصال قطع شد.');
+      cleanup();
+    }
+
+    function cleanup() {
+      try { if (txChar) txChar.removeEventListener('characteristicvaluechanged', onNotification); } catch {}
+      rxChar = null; txChar = null; service = null;
+      try { if (gatt && gatt.connected) gatt.disconnect(); } catch {}
+      gatt = null; device = null;
+      setConnectedUI(false);
+    }
+
+    function onNotification(e) {
+      try {
+        const value = e.target.value;
+        const text = textDec.decode(value);
+        appendLog('⬇️ RX: ' + text);
+      } catch (err) {
+        appendLog('❌ خطا در دریافت: ' + err);
+      }
+    }
+
+    async function sendString(str) {
+      if (!rxChar) { appendLog('⚠️ هنوز متصل نیستید.'); return; }
+      try {
+        // اضافه کردن ; به انتهای هر دستور
+        str = str + ';';
+        if (appendNewlineEl.checked) str += '\n';
+        const data = textEnc.encode(str);
+        const props = rxChar.properties;
+        if (props.writeWithoutResponse) {
+          await rxChar.writeValueWithoutResponse(data);
+        } else {
+          await rxChar.writeValue(data);
+        }
+        appendLog('⬆️ TX: ' + str.replace(/\n$/, ''));
+      } catch (err) {
+        appendLog('❌ خطا در ارسال: ' + err);
+      }
+    }
+
+    btnConnect.addEventListener('click', connect);
+    btnDisconnect.addEventListener('click', () => {
+      if (device && device.gatt && device.gatt.connected) {
+        device.gatt.disconnect();
+      } else {
+        cleanup();
+      }
+    });
+
+    sendButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.for;
+        const val = cmdInputs[id].value;
+        sendString(val);
+      });
+    });
+
+    btnSendCustom.addEventListener('click', () => {
+      const val = cmdInputs.custom.value.trim();
+      if (val) sendString(val);
+    });
+
+    cmdInputs.custom.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnSendCustom.click();
+    });
+
+    btnClear.addEventListener('click', () => { logEl.textContent = ''; });
+
+    btnSave.addEventListener('click', () => {
+      const blob = new Blob([logEl.textContent], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'ble-log.txt'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    setConnectedUI(false);
+  </script>
+</body>
+</html>
