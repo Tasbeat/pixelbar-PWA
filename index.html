@@ -2,42 +2,108 @@
 <html lang="fa" dir="rtl">
 <head>
   <link rel="manifest" href="manifest.json">
-<script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js");
-  }
-</script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js");
+    }
+  </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>وب‌اپ بلوتوث (BLE) — ارسال ۴ دستور + دریافت دیتا</title>
   <style>
     :root { --radius: 16px; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0b0e14; color:#eaeefb; margin:0; }
-    .container { max-width: 980px; margin: 24px auto; padding: 24px; }
-    .card { background:#111522; border: 1px solid #1b2030; border-radius: var(--radius); padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
-    h1 { font-size: 22px; margin: 0 0 10px; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background:#0b0e14;
+      color:#eaeefb;
+      margin:0;
+    }
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .card {
+      background:#111522;
+      border: 1px solid #1b2030;
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    }
+    h1 { font-size: 20px; margin: 0 0 12px; line-height:1.4; }
     .muted { color:#a9b1d6; font-size: 14px; }
     .row { display:flex; gap:12px; flex-wrap: wrap; align-items:center; }
-    button { cursor:pointer; border-radius: 12px; border:1px solid #2a324a; background:#1a2033; color:#eaeefb; padding:10px 14px; font-size:14px; }
+    button {
+      cursor:pointer;
+      border-radius: 12px;
+      border:1px solid #2a324a;
+      background:#1a2033;
+      color:#eaeefb;
+      padding:12px 16px;
+      font-size:15px;
+      flex:1;
+      min-width:100px;
+    }
     button.primary { background:#2a7bff; border-color:#2a7bff; color:white; }
     button.danger { background:#b73535; border-color:#b73535; }
     button:disabled { opacity:.5; cursor:not-allowed; }
-    input[type="text"], input[type="search"] { flex:1; min-width: 200px; border-radius: 12px; border:1px solid #2a324a; background:#0f1423; color:#eaeefb; padding:10px 12px; }
+    input[type="text"], input[type="search"] {
+      flex:1;
+      min-width: 140px;
+      border-radius: 12px;
+      border:1px solid #2a324a;
+      background:#0f1423;
+      color:#eaeefb;
+      padding:12px;
+      font-size:15px;
+    }
     label { font-size: 13px; color:#bac4e0; }
     .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
-    @media (min-width: 720px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
-    .cmd-row { display:flex; gap:8px; align-items:center; }
-    .log { background:#0f1423; border:1px solid #2a324a; border-radius: 12px; min-height: 220px; max-height: 340px; overflow:auto; padding:12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; white-space: pre-wrap; }
-    .tag { display:inline-block; background:#19213a; color:#9db1ff; border:1px solid #2a324a; padding:4px 8px; border-radius:999px; font-size:12px; margin-inline-end:6px; }
+    @media (min-width: 720px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+    .cmd-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .log {
+      background:#0f1423;
+      border:1px solid #2a324a;
+      border-radius: 12px;
+      min-height: 220px;
+      max-height: 340px;
+      overflow:auto;
+      padding:12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .tag {
+      display:inline-block;
+      background:#19213a;
+      color:#9db1ff;
+      border:1px solid #2a324a;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:12px;
+      margin-inline-end:6px;
+    }
     .sep { height:1px; background:linear-gradient(90deg, transparent, #2a324a, transparent); margin:16px 0; }
     .row .grow { flex:1; }
+    /* موبایل فرندلی */
+    @media (max-width: 600px) {
+      h1 { font-size: 18px; }
+      .container { padding: 12px; }
+      .card { padding: 12px; }
+      .cmd-row { flex-direction: column; align-items: stretch; }
+      .cmd-row label { margin-bottom:4px; }
+      button { width:100%; }
+      input[type="text"] { width:100%; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
       <h1>اتصال به دیوایس BLE و ارسال/دریافت رشته‌ها</h1>
-      <p class="muted">این وب‌اپ از <b>Web Bluetooth</b> استفاده می‌کند (فقط <b>BLE</b>). برای اجرا، صفحه را از <b>localhost</b> باز کنید (نه file://). بهترین مرورگر: Chrome/Edge دسکتاپ.</p>
+      <p class="muted">این وب‌اپ از <b>Web Bluetooth</b> استفاده می‌کند (فقط <b>BLE</b>). برای اجرا، صفحه را از <b>localhost</b> یا HTTPS باز کنید (نه file://). بهترین مرورگر: Chrome/Edge دسکتاپ یا اندروید.</p>
 
       <div class="sep"></div>
 
@@ -54,22 +120,22 @@
 
       <div class="grid grid-2">
         <div class="cmd-row">
-          <label class="muted" style="min-width:70px;">دستور ۱</label>
+          <label class="muted">دستور ۱</label>
           <input id="cmd1" type="text" value="CMD1" />
           <button class="sendBtn" data-for="cmd1" disabled>ارسال</button>
         </div>
         <div class="cmd-row">
-          <label class="muted" style="min-width:70px;">دستور ۲</label>
+          <label class="muted">دستور ۲</label>
           <input id="cmd2" type="text" value="CMD2" />
           <button class="sendBtn" data-for="cmd2" disabled>ارسال</button>
         </div>
         <div class="cmd-row">
-          <label class="muted" style="min-width:70px;">دستور ۳</label>
+          <label class="muted">دستور ۳</label>
           <input id="cmd3" type="text" value="CMD3" />
           <button class="sendBtn" data-for="cmd3" disabled>ارسال</button>
         </div>
         <div class="cmd-row">
-          <label class="muted" style="min-width:70px;">دستور ۴</label>
+          <label class="muted">دستور ۴</label>
           <input id="cmd4" type="text" value="CMD4" />
           <button class="sendBtn" data-for="cmd4" disabled>ارسال</button>
         </div>
@@ -78,11 +144,11 @@
       <div class="sep"></div>
 
       <div class="cmd-row">
-        <label class="muted" style="min-width:90px;">دستور دلخواه</label>
-        <input id="customCmd" type="text" placeholder="مثلاً LED ON" />
+        <label class="muted">دستور دلخواه</label>
+        <input id="customCmd" type="text" placeholder="مثلاً LED-ON" />
         <button id="btnSendCustom" disabled>ارسال</button>
-        <button id="btnClear" class="" title="پاک کردن لاگ">پاک‌کردن لاگ</button>
-        <button id="btnSave" class="" title="دانلود لاگ">دانلود لاگ</button>
+        <button id="btnClear" title="پاک کردن لاگ">پاک‌کردن لاگ</button>
+        <button id="btnSave" title="دانلود لاگ">دانلود لاگ</button>
       </div>
 
       <div class="sep"></div>
@@ -100,19 +166,19 @@
         <p class="muted">پیش‌فرض روی <b>Nordic UART Service</b> تنظیم شده. اگر دیوایس شما UUID دیگری دارد، این مقادیر را تغییر دهید.</p>
         <div class="grid">
           <div class="cmd-row">
-            <label style="min-width:190px;">Service UUID</label>
+            <label>Service UUID</label>
             <input id="svcUuid" type="text" value="6e400001-b5a3-f393-e0a9-e50e24dcca9e" />
           </div>
           <div class="cmd-row">
-            <label style="min-width:190px;">RX (write) UUID</label>
+            <label>RX (write) UUID</label>
             <input id="rxUuid" type="text" value="6e400002-b5a3-f393-e0a9-e50e24dcca9e" />
           </div>
           <div class="cmd-row">
-            <label style="min-width:190px;">TX (notify) UUID</label>
+            <label>TX (notify) UUID</label>
             <input id="txUuid" type="text" value="6e400003-b5a3-f393-e0a9-e50e24dcca9e" />
           </div>
           <div class="cmd-row">
-            <label style="min-width:190px;">فیلتر نام (اختیاری)</label>
+            <label>فیلتر نام (اختیاری)</label>
             <input id="namePrefix" type="text" placeholder="مثلاً ESP / NUS / MyDev" />
           </div>
         </div>
@@ -238,7 +304,7 @@
       try {
         // اضافه کردن ; به انتهای هر دستور
         str = str + ';';
-        if (appendNewlineEl.checked) str += '\n';
+        if (appendNewlineEl.checked) str += '\\n';
         const data = textEnc.encode(str);
         const props = rxChar.properties;
         if (props.writeWithoutResponse) {
@@ -246,7 +312,7 @@
         } else {
           await rxChar.writeValue(data);
         }
-        appendLog('⬆️ TX: ' + str.replace(/\n$/, ''));
+        appendLog('⬆️ TX: ' + str.replace(/\\n$/, ''));
       } catch (err) {
         appendLog('❌ خطا در ارسال: ' + err);
       }
