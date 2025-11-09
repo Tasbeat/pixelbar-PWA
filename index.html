@@ -47,7 +47,7 @@
     button.primary { background:#2a7bff; border-color:#2a7bff; color:white; }
     button.danger { background:#b73535; border-color:#b73535; }
     button:disabled { opacity:.5; cursor:not-allowed; }
-    input[type="text"], input[type="search"] {
+    input[type="text"], input[type="search"], input[type="number"] {
       flex:1;
       min-width: 140px;
       border-radius: 12px;
@@ -57,10 +57,13 @@
       padding:12px;
       font-size:15px;
     }
+    input[type="number"] { min-width: 80px; }
     label { font-size: 13px; color:#bac4e0; }
     .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
     @media (min-width: 720px) {
       .grid-2 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+      .grid-4 { grid-template-columns: repeat(4, 1fr); }
     }
     .cmd-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .log {
@@ -87,6 +90,7 @@
     }
     .sep { height:1px; background:linear-gradient(90deg, transparent, #2a324a, transparent); margin:16px 0; }
     .row .grow { flex:1; }
+    .section-header { font-size: 16px; margin: 16px 0 8px; color: #fff; }
     /* موبایل فرندلی */
     @media (max-width: 600px) {
       h1 { font-size: 18px; }
@@ -95,7 +99,7 @@
       .cmd-row { flex-direction: column; align-items: stretch; }
       .cmd-row label { margin-bottom:4px; }
       button { width:100%; }
-      input[type="text"] { width:100%; }
+      input[type="text"], input[type="number"] { width:100%; }
     }
   </style>
 </head>
@@ -149,6 +153,73 @@
         <button id="btnSendCustom" disabled>ارسال</button>
         <button id="btnClear" title="پاک کردن لاگ">پاک‌کردن لاگ</button>
         <button id="btnSave" title="دانلود لاگ">دانلود لاگ</button>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- بخش جدید: کنترل‌های دستگاه -->
+      <div class="section-header">کنترل‌های دستگاه</div>
+
+      <!-- Vibrate -->
+      <div class="cmd-row">
+        <label class="muted">ویبره (میلی‌ثانیه)</label>
+        <input id="vibrateDuration" type="number" placeholder="1000" min="1" />
+        <button id="btnVibrate" disabled>ارسال ویبره</button>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- LED Controls -->
+      <div class="section-header">کنترل LED</div>
+      <div class="grid grid-2">
+        <div class="cmd-row">
+          <label>LED1</label>
+          <button id="btnLed1On" class="primary" disabled>روشن</button>
+          <button id="btnLed1Off" class="danger" disabled>خاموش</button>
+        </div>
+        <div class="cmd-row">
+          <label>LED2</label>
+          <button id="btnLed2On" class="primary" disabled>روشن</button>
+          <button id="btnLed2Off" class="danger" disabled>خاموش</button>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- Timer Up -->
+      <div class="section-header">تایمر بالا رونده (Timer Up)</div>
+      <div class="grid grid-2">
+        <div class="cmd-row">
+          <label>شروع (میلی‌ثانیه)</label>
+          <input id="timerUpDuration" type="number" placeholder="5000" min="1" />
+          <button id="btnTimerUpStart" disabled>شروع</button>
+        </div>
+        <div class="cmd-row">
+          <button id="btnTimerUpPause" disabled>توقف موقت</button>
+          <button id="btnTimerUpResume" disabled>ادامه</button>
+        </div>
+        <div class="cmd-row">
+          <button id="btnTimerUpReset" class="danger" disabled>ریست</button>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- Timer Down -->
+      <div class="section-header">تایمر پایین رونده (Timer Down)</div>
+      <div class="grid grid-2">
+        <div class="cmd-row">
+          <label>شروع (میلی‌ثانیه)</label>
+          <input id="timerDownDuration" type="number" placeholder="5000" min="1" />
+          <button id="btnTimerDownStart" disabled>شروع</button>
+        </div>
+        <div class="cmd-row">
+          <button id="btnTimerDownPause" disabled>توقف موقت</button>
+          <button id="btnTimerDownResume" disabled>ادامه</button>
+        </div>
+        <div class="cmd-row">
+          <button id="btnTimerDownReset" class="danger" disabled>ریست</button>
+        </div>
       </div>
 
       <div class="sep"></div>
@@ -207,12 +278,32 @@
       custom: $('#customCmd'),
     };
 
+    // ورودی‌های جدید برای کنترل‌ها
+    const vibrateInput = $('#vibrateDuration');
+    const timerUpInput = $('#timerUpDuration');
+    const timerDownInput = $('#timerDownDuration');
+
     const uuidInputs = {
       service: $('#svcUuid'),
       rx: $('#rxUuid'),
       tx: $('#txUuid'),
       namePrefix: $('#namePrefix'),
     };
+
+    // دکمه‌های جدید
+    const btnVibrate = $('#btnVibrate');
+    const btnLed1On = $('#btnLed1On');
+    const btnLed1Off = $('#btnLed1Off');
+    const btnLed2On = $('#btnLed2On');
+    const btnLed2Off = $('#btnLed2Off');
+    const btnTimerUpStart = $('#btnTimerUpStart');
+    const btnTimerUpPause = $('#btnTimerUpPause');
+    const btnTimerUpResume = $('#btnTimerUpResume');
+    const btnTimerUpReset = $('#btnTimerUpReset');
+    const btnTimerDownStart = $('#btnTimerDownStart');
+    const btnTimerDownPause = $('#btnTimerDownPause');
+    const btnTimerDownResume = $('#btnTimerDownResume');
+    const btnTimerDownReset = $('#btnTimerDownReset');
 
     let device = null;
     let gatt = null;
@@ -235,6 +326,9 @@
       btnDisconnect.disabled = !connected;
       btnSendCustom.disabled = !connected;
       sendButtons.forEach(b => b.disabled = !connected);
+      // غیرفعال/فعال کردن دکمه‌های جدید
+      [btnVibrate, btnLed1On, btnLed1Off, btnLed2On, btnLed2Off, btnTimerUpStart, btnTimerUpPause, btnTimerUpResume, btnTimerUpReset,
+       btnTimerDownStart, btnTimerDownPause, btnTimerDownResume, btnTimerDownReset].forEach(b => b.disabled = !connected);
       statusEl.textContent = 'وضعیت: ' + (connected ? 'متصل' : 'قطع');
       statusEl.style.color = connected ? '#7dff9e' : '';
     }
@@ -318,6 +412,7 @@
       }
     }
 
+    // Event listeners برای دکمه‌های قدیمی
     btnConnect.addEventListener('click', connect);
     btnDisconnect.addEventListener('click', () => {
       if (device && device.gatt && device.gatt.connected) {
@@ -353,6 +448,59 @@
       a.href = url; a.download = 'ble-log.txt'; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
+
+    // Event listeners جدید برای کنترل‌های دستگاه
+    btnVibrate.addEventListener('click', () => {
+      const duration = vibrateInput.value.trim();
+      if (!duration || isNaN(duration)) {
+        appendLog('⚠️ لطفاً مدت زمان ویبره (عدد) را وارد کنید.');
+        return;
+      }
+      sendString(`vibrate-${duration}`);
+    });
+
+    vibrateInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnVibrate.click();
+    });
+
+    btnLed1On.addEventListener('click', () => sendString('LED1-on'));
+    btnLed1Off.addEventListener('click', () => sendString('LED1-off'));
+    btnLed2On.addEventListener('click', () => sendString('LED2-on'));
+    btnLed2Off.addEventListener('click', () => sendString('LED2-off'));
+
+    btnTimerUpStart.addEventListener('click', () => {
+      const duration = timerUpInput.value.trim();
+      if (!duration || isNaN(duration)) {
+        appendLog('⚠️ لطفاً مدت زمان تایمر (عدد، میلی‌ثانیه) را وارد کنید.');
+        return;
+      }
+      sendString(`Timer-up ${duration}`);
+    });
+
+    timerUpInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnTimerUpStart.click();
+    });
+
+    btnTimerUpPause.addEventListener('click', () => sendString('Timer-up-pause'));
+    btnTimerUpResume.addEventListener('click', () => sendString('Timer-up-resume'));
+    btnTimerUpReset.addEventListener('click', () => sendString('Timer-up-reset'));
+
+    btnTimerDownStart.addEventListener('click', () => {
+      const duration = timerDownInput.value.trim();
+      if (!duration || isNaN(duration)) {
+        appendLog('⚠️ لطفاً مدت زمان تایمر (عدد، میلی‌ثانیه) را وارد کنید.');
+        return;
+      }
+      sendString(`Timer-down ${duration}`);
+    });
+
+    timerDownInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnTimerDownStart.click();
+    });
+
+    btnTimerDownPause.addEventListener('click', () => sendString('Timer-down-pause'));
+    btnTimerDownResume.addEventListener('click', () => sendString('Timer-down-resume'));
+    btnTimerDownReset.addEventListener('click', () => sendString('Timer-down-reset'));
 
     setConnectedUI(false);
   </script>
